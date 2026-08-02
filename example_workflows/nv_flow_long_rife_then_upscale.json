@@ -1,0 +1,15 @@
+{
+  "id": "64b9e526-cdee-4b7a-8afd-f3670f04d781",
+  "revision": 0,
+  "last_node_id": 4,
+  "last_link_id": 3,
+  "nodes": [
+    {"id": 1, "type": "LoadVideo", "pos": [-820, 40], "size": [380, 500], "flags": {}, "order": 0, "mode": 0, "inputs": [], "outputs": [{"name": "VIDEO", "type": "VIDEO", "links": [1]}], "properties": {"cnr_id": "comfy-core", "Node name for S&R": "LoadVideo"}, "widgets_values": ["input.mp4", "image"]},
+    {"id": 2, "type": "NVFlowRIFELoader", "pos": [-380, 500], "size": [280, 80], "flags": {}, "order": 1, "mode": 0, "inputs": [], "outputs": [{"name": "rife_model", "type": "NVFLOW_RIFE", "links": [2]}], "properties": {"Node name for S&R": "NVFlowRIFELoader"}, "widgets_values": ["fp16"]},
+    {"id": 3, "type": "NVFlowLongVideoProcess", "pos": [-380, 40], "size": [370, 420], "flags": {}, "order": 2, "mode": 0, "inputs": [{"name": "video", "type": "VIDEO", "link": 1}, {"name": "rife_model", "shape": 7, "type": "NVFLOW_RIFE", "link": 2}], "outputs": [{"name": "video", "type": "VIDEO", "links": [3]}], "properties": {"Node name for S&R": "NVFlowLongVideoProcess"}, "widgets_values": ["rife + upscale", "target fps", 2, 60.0, false, 1.0, 0.3, "scale", 2.0, 3840, 2160, 0.2, 1, "h264_nvenc", 75, "balanced", 30]},
+    {"id": 4, "type": "SaveVideo", "pos": [70, 40], "size": [570, 500], "flags": {}, "order": 3, "mode": 0, "inputs": [{"name": "video", "type": "VIDEO", "link": 3}], "outputs": [], "properties": {"cnr_id": "comfy-core", "Node name for S&R": "SaveVideo"}, "widgets_values": ["video/NVFlow_long_rife_then_upscale", "auto", "auto"]}
+  ],
+  "links": [[1, 1, 0, 3, 0, "VIDEO"], [2, 2, 0, 3, 1, "NVFLOW_RIFE"], [3, 3, 0, 4, 0, "VIDEO"]],
+  "groups": [{"id": 1, "title": "Long video: RIFE first, then upscale each output frame", "bounding": [-850, 0, 1530, 620], "color": "#3f789e", "font_size": 24, "flags": {}}],
+  "config": {}, "extra": {"workflowRendererVersion": "LG", "ds": {"scale": 0.85, "offset": [760, 360]}, "frontendVersion": "1.39.19"}, "version": 0.4
+}

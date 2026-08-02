@@ -1,0 +1,7 @@
+[project]
+name = "comfyui-nv-flow"
+description = "Self-contained NVIDIA GPU RIFE interpolation and image upscaling for ComfyUI."
+version = "1.0.0"
+license = { file = "LICENSE" }
+classifiers = ["License :: OSI Approved :: Apache Software License"]
+dependencies = []

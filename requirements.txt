@@ -1,0 +1,2 @@
+# This extension uses the PyTorch installation supplied by ComfyUI.
+

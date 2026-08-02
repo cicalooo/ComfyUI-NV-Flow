@@ -1,0 +1,15 @@
+{
+  "id": "e28147ed-bb58-41f9-9f25-b4338ee847e8",
+  "revision": 0,
+  "last_node_id": 4,
+  "last_link_id": 4,
+  "nodes": [
+    {"id": 1, "type": "LoadVideo", "pos": [-760, 40], "size": [380, 500], "flags": {}, "order": 0, "mode": 0, "inputs": [], "outputs": [{"name": "VIDEO", "type": "VIDEO", "links": [1]}], "properties": {"cnr_id": "comfy-core", "Node name for S&R": "LoadVideo"}, "widgets_values": ["input.mp4", "image"]},
+    {"id": 2, "type": "NVFlowRIFELoader", "pos": [-320, 330], "size": [280, 80], "flags": {}, "order": 1, "mode": 0, "inputs": [], "outputs": [{"name": "rife_model", "type": "NVFLOW_RIFE", "links": [2]}], "properties": {"Node name for S&R": "NVFlowRIFELoader"}, "widgets_values": ["fp16"]},
+    {"id": 3, "type": "NVFlowRIFEVideo", "pos": [-320, 40], "size": [340, 250], "flags": {}, "order": 2, "mode": 0, "inputs": [{"name": "video", "type": "VIDEO", "link": 1}, {"name": "rife_model", "type": "NVFLOW_RIFE", "link": 2}], "outputs": [{"name": "video", "type": "VIDEO", "links": [3]}], "properties": {"Node name for S&R": "NVFlowRIFEVideo"}, "widgets_values": ["target fps", 2, 60.0, false, 1.0, 8, 0.3]},
+    {"id": 4, "type": "SaveVideo", "pos": [100, 40], "size": [570, 500], "flags": {}, "order": 3, "mode": 0, "inputs": [{"name": "video", "type": "VIDEO", "link": 3}], "outputs": [], "properties": {"cnr_id": "comfy-core", "Node name for S&R": "SaveVideo"}, "widgets_values": ["video/NVFlow_small_rife_custom_fps", "auto", "auto"]}
+  ],
+  "links": [[1, 1, 0, 3, 0, "VIDEO"], [2, 2, 0, 3, 1, "NVFLOW_RIFE"], [3, 3, 0, 4, 0, "VIDEO"]],
+  "groups": [{"id": 1, "title": "Small video: backend FPS detection and custom target FPS", "bounding": [-790, 0, 1500, 580], "color": "#3f789e", "font_size": 24, "flags": {}}],
+  "config": {}, "extra": {"workflowRendererVersion": "LG", "ds": {"scale": 0.85, "offset": [760, 340]}, "frontendVersion": "1.39.19"}, "version": 0.4
+}
