@@ -16,12 +16,14 @@ estimation and thresholding reduce amplification of noise and compression residu
 
 ## External upscale models
 
-Connect the output of ComfyUI's **Load Upscale Model** node to the optional
-`upscale_model` input. Any model already supported by ComfyUI/Spandrel can be
-used; NV Flow does not download models or introduce another model format.
+Connect **Load Upscale Model (NV Flow)** or ComfyUI's native **Load Upscale
+Model** to the optional `upscale_model` input. The NV Flow loader also handles
+training checkpoints wrapped in `model_state_dict` and weights saved with the
+PyTorch Compile `_orig_mod.` prefix. Any architecture supported by Spandrel can
+be used; NV Flow does not download models or introduce another model format.
 
 Place models in `ComfyUI/models/upscale_models`, restart or refresh ComfyUI if
-needed, and select the model in Load Upscale Model.
+needed, and select the model in the loader.
 
 Model inference uses ComfyUI's tiled execution and automatically reduces tile
 size after a VRAM exhaustion error. If the model's native scale differs from the

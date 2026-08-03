@@ -33,6 +33,8 @@ standard Save Video node.
 
 ## Model-assisted examples
 
-Before queueing either model-assisted graph, choose a model already installed in
-`ComfyUI/models/upscale_models` in its Load Upscale Model node. The other examples
+The model-assisted graphs use **Load Upscale Model (NV Flow)**, which accepts
+ordinary Spandrel checkpoints as well as supported training checkpoints wrapped
+in `model_state_dict` or saved with `_orig_mod.` keys. Choose a model available
+through ComfyUI's `upscale_models` paths before queueing. The other examples
 remain self-contained and do not require external weights.

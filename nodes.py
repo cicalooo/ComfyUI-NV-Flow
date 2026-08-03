@@ -3,7 +3,11 @@ from fractions import Fraction
 
 import torch
 import folder_paths
+import comfy.model_management as mm
+import comfy.model_patcher
+import comfy.utils
 from comfy_api.latest import InputImpl, Types
+from spandrel import ImageModelDescriptor, ModelLoader
 
 from .nvflow.interpolation import interpolate_frames
 from .nvflow.model import RIFEModel
@@ -82,6 +86,40 @@ class NVFlowRIFELoader:
             raise FileNotFoundError(f"Bundled RIFE weights are missing: {weights}")
         dtype = torch.float16 if precision == "fp16" else torch.float32
         return (RIFEModel(weights, dtype),)
+
+
+class NVFlowUpscaleModelLoader:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required": {"model_name": (folder_paths.get_filename_list("upscale_models"),)}}
+
+    RETURN_TYPES = ("UPSCALE_MODEL",)
+    RETURN_NAMES = ("upscale_model",)
+    FUNCTION = "load"
+    CATEGORY = CATEGORY
+    DESCRIPTION = "Load a ComfyUI/Spandrel upscale model, including wrapped training and torch.compile checkpoints."
+
+    def load(self, model_name):
+        model_path = folder_paths.get_full_path_or_raise("upscale_models", model_name)
+        state = comfy.utils.load_torch_file(model_path, safe_load=True)
+        if isinstance(state, dict) and isinstance(state.get("model_state_dict"), dict):
+            state = state["model_state_dict"]
+        if not isinstance(state, dict):
+            raise ValueError(f"Upscale checkpoint does not contain a state dictionary: {model_name}")
+        if state and all(key.startswith("_orig_mod.") for key in state):
+            state = {key.removeprefix("_orig_mod."): value for key, value in state.items()}
+        if "module.layers.0.residual_group.blocks.0.norm1.weight" in state:
+            state = {key.removeprefix("module."): value for key, value in state.items()}
+
+        model = ModelLoader().load_from_state_dict(state).eval()
+        if not isinstance(model, ImageModelDescriptor):
+            raise ValueError("Upscale model must be a single-image model.")
+        model.patcher = comfy.model_patcher.CoreModelPatcher(
+            model.model,
+            load_device=mm.get_torch_device(),
+            offload_device=mm.unet_offload_device(),
+        )
+        return (model,)
 
 
 class NVFlowRIFEInterpolate:
@@ -250,6 +288,7 @@ class NVFlowLongVideoProcess:
 NODE_CLASS_MAPPINGS = {
     "NVFlowLoadVideoPath": NVFlowLoadVideoPath,
     "NVFlowRIFELoader": NVFlowRIFELoader,
+    "NVFlowUpscaleModelLoader": NVFlowUpscaleModelLoader,
     "NVFlowRIFEInterpolate": NVFlowRIFEInterpolate,
     "NVFlowRIFEVideo": NVFlowRIFEVideo,
     "NVFlowCUDAUpscale": NVFlowCUDAUpscale,
@@ -259,6 +298,7 @@ NODE_CLASS_MAPPINGS = {
 NODE_DISPLAY_NAME_MAPPINGS = {
     "NVFlowLoadVideoPath": "Load Video From Path (NV Flow)",
     "NVFlowRIFELoader": "Load RIFE (NV Flow)",
+    "NVFlowUpscaleModelLoader": "Load Upscale Model (NV Flow)",
     "NVFlowRIFEInterpolate": "RIFE Interpolate (NV Flow)",
     "NVFlowRIFEVideo": "RIFE Video FPS (NV Flow)",
     "NVFlowCUDAUpscale": "CUDA Detail Upscale (NV Flow)",

@@ -21,6 +21,17 @@ Loads the bundled RIFE 4.9 weights. Use `fp16` for lower VRAM use and faster
 processing on supported NVIDIA GPUs; use `fp32` when maximum numerical precision
 is more important. A single loaded model can feed multiple interpolation nodes.
 
+## Load Upscale Model (NV Flow)
+
+Loads standard ComfyUI/Spandrel upscale models and also normalizes common training
+checkpoint wrappers. It unwraps a `model_state_dict` entry and removes a uniform
+PyTorch Compile `_orig_mod.` prefix before architecture detection. This allows
+supported architectures such as GRL to load when their distributed checkpoint
+is not directly accepted by ComfyUI's native Load Upscale Model node.
+
+The output is the standard `UPSCALE_MODEL` type and can be used by NV Flow or
+other compatible ComfyUI nodes. Unsupported architectures still fail explicitly.
+
 ## RIFE Interpolate (NV Flow)
 
 Interpolates an IMAGE sequence in GPU batches.
