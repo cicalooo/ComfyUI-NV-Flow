@@ -16,7 +16,7 @@ import comfy.model_management as mm
 from comfy.utils import ProgressBar
 
 from .interpolation import _scene_cuts
-from .upscale import cuda_upscale
+from .upscale import analyze_source, cuda_upscale
 
 
 PIPELINE_VERSION = 1
@@ -68,17 +68,21 @@ def _source_key(video, source):
     return ["buffer", digest]
 
 
-def _job_key(video, source, settings, rife):
+def _job_key(video, source, settings, rife, upscale_model):
     model_key = None
     if rife is not None:
         stat = rife.weights.stat()
         model_key = [str(rife.weights.resolve()), stat.st_size, stat.st_mtime_ns, str(rife.dtype)]
+    upscale_key = None
+    if upscale_model is not None:
+        upscale_key = [upscale_model.__class__.__module__, upscale_model.__class__.__name__, upscale_model.scale, id(upscale_model)]
     payload = {
         "version": PIPELINE_VERSION,
         "source": _source_key(video, source),
         "trim": video.get_active_trim_window(),
         "settings": settings,
         "model": model_key,
+        "upscale_model": upscale_key,
     }
     return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
 
@@ -99,11 +103,13 @@ def _check_encoder(encoder):
         raise ValueError(f"Video encoder '{encoder}' is unavailable. Select another encoder.") from error
 
 
-def _video_info(source):
+def _video_info(source, start_time):
     if not isinstance(source, str):
         source.seek(0)
     with av.open(source, mode="r") as container:
         stream = container.streams.video[0]
+        if start_time:
+            container.seek(int(start_time / stream.time_base), stream=stream)
         rate = Fraction(stream.average_rate) if stream.average_rate else Fraction(1)
         bit_depth = max((component.bits for component in stream.format.components), default=8)
         metadata = dict(container.metadata)
@@ -112,13 +118,27 @@ def _video_info(source):
             for name in ("color_range", "colorspace", "color_primaries", "color_trc")
         }
         has_alpha = any(component.is_alpha for component in stream.format.components)
-        first_frame = next(container.decode(stream), None)
+        sampled = []
+        first_frame = None
+        for frame in container.decode(stream):
+            frame_time = float(frame.pts * stream.time_base) if frame.pts is not None else start_time
+            if frame_time < start_time:
+                continue
+            first_frame = first_frame or frame
+            image = _frame_tensor(frame)
+            if max(image.shape[:2]) > 256:
+                scale = 256 / max(image.shape[:2])
+                image = torch.nn.functional.interpolate(image.movedim(-1, 0).unsqueeze(0), scale_factor=scale, mode="area").squeeze(0).movedim(0, -1)
+            sampled.append(image)
+            if len(sampled) == 8:
+                break
         rotation = first_frame.rotation if first_frame is not None else 0
         if rotation % 180:
             width, height = stream.height, stream.width
         else:
             width, height = stream.width, stream.height
-        return rate, bit_depth, metadata, color, has_alpha, width, height
+        analysis = analyze_source(torch.stack(sampled)) if sampled else None
+        return rate, bit_depth, metadata, color, has_alpha, width, height, analysis
 
 
 def _valid_segment(path, expected_frames, rate, width, height):
@@ -312,10 +332,11 @@ def _assemble(directory, segments, output, source, start_time, duration, metadat
     os.replace(output_partial, output)
 
 
-def process_long_video(video, rife, settings, temp_root):
+def process_long_video(video, rife, upscale_model, settings, temp_root):
     job_started = time.perf_counter()
     source = video.get_stream_source()
-    source_rate, source_bit_depth, metadata, color, has_alpha, source_width, source_height = _video_info(source)
+    start_time, duration = video.get_active_trim_window()
+    source_rate, source_bit_depth, metadata, color, has_alpha, source_width, source_height, source_analysis = _video_info(source, start_time)
     if has_alpha:
         raise ValueError("Long-video MP4 processing does not support alpha video. Use the IMAGE nodes when alpha must be preserved.")
     operation = settings["operation"]
@@ -341,7 +362,7 @@ def process_long_video(video, rife, settings, temp_root):
         width, height = source_width, source_height
 
     _check_encoder(settings["encoder"])
-    key = _job_key(video, source, settings, rife)
+    key = _job_key(video, source, settings, rife, upscale_model if use_upscale else None)
     directory = Path(temp_root) / "nvflow_long" / key
     directory.mkdir(parents=True, exist_ok=True)
     output = directory / "result.mp4"
@@ -363,7 +384,6 @@ def process_long_video(video, rife, settings, temp_root):
 
     frames_per_segment = max(1, round(settings["chunk_seconds"] * float(output_rate)))
     writer = _ChunkWriter(directory, output_rate, width, height, settings["encoder"], settings["quality"], settings["speed"], source_bit_depth, color, manifest, completed)
-    start_time, duration = video.get_active_trim_window()
     end_time = start_time + duration if duration else math.inf
     total_frames = video.get_frame_count()
     estimated = max(1, round(total_frames * float(output_rate / source_rate)))
@@ -384,9 +404,12 @@ def process_long_video(video, rife, settings, temp_root):
     model = rife.load(device) if use_rife else None
     queue = []
     output_index = 0
+    upscale_analysis = source_analysis
+    if use_upscale and upscale_analysis is not None:
+        log.info("NV Flow source analysis: %s", upscale_analysis)
 
     def flush():
-        nonlocal queue
+        nonlocal queue, upscale_analysis
         if not queue:
             return
         interpolation_entries = [entry for entry in queue if entry[0] == "rife"]
@@ -394,7 +417,10 @@ def process_long_video(video, rife, settings, temp_root):
         images = [next(generated) if entry[0] == "rife" else entry[1] for entry in queue]
         batch = torch.stack(images)
         if use_upscale:
-            batch = cuda_upscale(batch, width, height, settings["detail"], settings["batch_size"])
+            if upscale_analysis is None:
+                upscale_analysis = analyze_source(torch.stack([entry[1] for entry in queue]))
+                log.info("NV Flow source analysis: %s", upscale_analysis)
+            batch = cuda_upscale(batch, width, height, settings["detail"], settings["batch_size"], settings["upscale_quality"], upscale_model, upscale_analysis)
         for entry, image in zip(queue, batch):
             segment = entry[-1] // frames_per_segment
             if not writer.is_complete(segment):

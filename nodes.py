@@ -117,23 +117,25 @@ class NVFlowCUDAUpscale:
                 "width": ("INT", {"default": 1920, "min": 8, "max": 16384, "step": 8}),
                 "height": ("INT", {"default": 1080, "min": 8, "max": 16384, "step": 8}),
                 "detail": ("FLOAT", {"default": 0.2, "min": 0.0, "max": 1.0, "step": 0.05}),
+                "upscale_quality": (["auto", "faithful", "restore", "enhance"], {"default": "auto"}),
                 "batch_size": ("INT", {"default": 4, "min": 1, "max": 64}),
-            }
+            },
+            "optional": {"upscale_model": ("UPSCALE_MODEL",)},
         }
 
     RETURN_TYPES = ("IMAGE",)
     RETURN_NAMES = ("images",)
     FUNCTION = "upscale"
     CATEGORY = CATEGORY
-    DESCRIPTION = "CUDA bicubic image upscaling with restrained luminance detail recovery."
+    DESCRIPTION = "Quality-aware CUDA upscale with source analysis and optional ComfyUI upscale models."
 
-    def upscale(self, images, resize_mode, scale, width, height, detail, batch_size):
+    def upscale(self, images, resize_mode, scale, width, height, detail, batch_size, upscale_quality="auto", upscale_model=None):
         if resize_mode == "scale":
             height = round(images.shape[1] * scale)
             width = round(images.shape[2] * scale)
         width = max(8, round(width / 8) * 8)
         height = max(8, round(height / 8) * 8)
-        return (cuda_upscale(images, width, height, detail, batch_size),)
+        return (cuda_upscale(images, width, height, detail, batch_size, upscale_quality, upscale_model),)
 
 
 class NVFlowLongVideoProcess:
@@ -154,22 +156,23 @@ class NVFlowLongVideoProcess:
                 "width": ("INT", {"default": 3840, "min": 8, "max": 16384, "step": 8}),
                 "height": ("INT", {"default": 2160, "min": 8, "max": 16384, "step": 8}),
                 "detail": ("FLOAT", {"default": 0.2, "min": 0.0, "max": 1.0, "step": 0.05}),
+                "upscale_quality": (["auto", "faithful", "restore", "enhance"], {"default": "auto"}),
                 "batch_size": ("INT", {"default": 1, "min": 1, "max": 16}),
                 "encoder": (["h264_nvenc", "hevc_nvenc", "libx264"], {"default": "h264_nvenc"}),
                 "quality": ("INT", {"default": 75, "min": 0, "max": 100}),
                 "speed": (["quality", "balanced", "fast"], {"default": "balanced"}),
                 "chunk_seconds": ("INT", {"default": 30, "min": 5, "max": 300}),
             },
-            "optional": {"rife_model": ("NVFLOW_RIFE",)},
+            "optional": {"rife_model": ("NVFLOW_RIFE",), "upscale_model": ("UPSCALE_MODEL",)},
         }
 
     RETURN_TYPES = ("VIDEO",)
     RETURN_NAMES = ("video",)
     FUNCTION = "process"
     CATEGORY = CATEGORY
-    DESCRIPTION = "Stream long videos through RIFE, upscaling, or both with bounded memory and resumable temporary chunks."
+    DESCRIPTION = "Stream long videos through RIFE and quality-aware upscaling with bounded memory and resumable chunks."
 
-    def process(self, video, operation, fps_mode, multiplier, target_fps, ensemble, motion_scale, scene_cut_threshold, resize_mode, upscale_scale, width, height, detail, batch_size, encoder, quality, speed, chunk_seconds, rife_model=None):
+    def process(self, video, operation, fps_mode, multiplier, target_fps, ensemble, motion_scale, scene_cut_threshold, resize_mode, upscale_scale, width, height, detail, upscale_quality, batch_size, encoder, quality, speed, chunk_seconds, rife_model=None, upscale_model=None):
         settings = {
             "operation": operation,
             "fps_mode": fps_mode,
@@ -183,13 +186,14 @@ class NVFlowLongVideoProcess:
             "width": width,
             "height": height,
             "detail": detail,
+            "upscale_quality": upscale_quality,
             "batch_size": batch_size,
             "encoder": encoder,
             "quality": quality,
             "speed": speed,
             "chunk_seconds": chunk_seconds,
         }
-        output = process_long_video(video, rife_model, settings, folder_paths.get_temp_directory())
+        output = process_long_video(video, rife_model, upscale_model, settings, folder_paths.get_temp_directory())
         return (InputImpl.VideoFromFile(str(output)),)
 
 
