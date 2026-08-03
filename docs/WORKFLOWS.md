@@ -26,8 +26,10 @@ ComfyUI. Select the input video and review output dimensions before queueing.
 - [`nv_flow_long_rife_then_upscale.json`](../example_workflows/nv_flow_long_rife_then_upscale.json)
   performs streaming RIFE followed by upscale using a custom target FPS.
 
-The long examples default to H.264 NVENC and pass their temporary `VIDEO` result
-to ComfyUI's standard Save Video node.
+All long examples use **Load Video From Path (NV Flow)**. Replace the placeholder
+with an absolute path that is accessible to the machine running ComfyUI. They
+default to H.264 NVENC and pass their temporary `VIDEO` result to ComfyUI's
+standard Save Video node.
 
 ## Model-assisted examples
 

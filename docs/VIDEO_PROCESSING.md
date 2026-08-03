@@ -14,6 +14,13 @@ resolutions or frame rates, or whenever full-frame tensors would consume too
 much RAM. It decodes, processes, and encodes bounded batches. Combined mode runs
 RIFE before upscaling so interpolation occurs at the smaller source resolution.
 
+Connect **Load Video From Path (NV Flow)** and enter the absolute path to the
+source on the machine running ComfyUI. The node passes that file to ComfyUI's
+streaming video API without browser upload or an extra copy in the input folder.
+This avoids upload-size constraints, but it does not remove the disk-space,
+decode, processing, or output-size requirements of the job. Remote ComfyUI users
+must provide a path visible to the server, not a path on the browser's computer.
+
 Start with `batch_size: 1` for demanding model upscales. Larger batches may
 increase throughput when VRAM permits.
 

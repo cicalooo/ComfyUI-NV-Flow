@@ -4,7 +4,8 @@ Use this page as the documentation index.
 
 ## Guides
 
-- [Nodes and controls](NODES.md) describes every NV Flow node and its main inputs.
+- [Nodes and controls](NODES.md) describes every NV Flow node, including direct
+  loading of large videos from an absolute local path.
 - [Short and long video processing](VIDEO_PROCESSING.md) explains which path to
   use, FPS behavior, memory limits, chunk resume, encoding, audio, and progress.
 - [Upscaling and source-quality tuning](UPSCALING.md) explains quality modes,

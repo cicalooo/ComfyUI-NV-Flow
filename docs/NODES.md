@@ -1,5 +1,20 @@
 # Nodes and controls
 
+## Load Video From Path (NV Flow)
+
+Creates a streamable `VIDEO` directly from an absolute path on the machine
+running ComfyUI. This bypasses browser upload and avoids copying a large source
+into ComfyUI's input directory. It is the recommended loader for the long-video
+examples.
+
+The path must be absolute and must identify an existing file. Both Windows paths
+such as `D:\Videos\source.mp4` and absolute POSIX paths are accepted on their
+respective platforms. The node tracks file size and modification time so replacing
+or modifying the source invalidates ComfyUI's cached result.
+
+This node reads files with the permissions of the ComfyUI server process. Only
+load trusted paths, and remove private local paths before sharing a workflow.
+
 ## Load RIFE (NV Flow)
 
 Loads the bundled RIFE 4.9 weights. Use `fp16` for lower VRAM use and faster

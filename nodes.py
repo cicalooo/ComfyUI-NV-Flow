@@ -15,6 +15,56 @@ ROOT = Path(__file__).resolve().parent
 CATEGORY = "image/NV Flow"
 
 
+class NVFlowLoadVideoPath:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "video_path": ("STRING", {"default": "C:\\path\\to\\video.mp4"}),
+            }
+        }
+
+    RETURN_TYPES = ("VIDEO",)
+    RETURN_NAMES = ("video",)
+    FUNCTION = "load"
+    CATEGORY = CATEGORY
+    DESCRIPTION = "Load a server-local video directly from an absolute path without uploading or copying it."
+
+    @staticmethod
+    def _resolve(video_path):
+        raw = str(video_path).strip().strip('"')
+        if not raw:
+            raise ValueError("Video path cannot be empty.")
+        path = Path(raw).expanduser()
+        if not path.is_absolute():
+            raise ValueError("Video path must be absolute.")
+        path = path.resolve(strict=True)
+        if not path.is_file():
+            raise ValueError(f"Video path is not a file: {path}")
+        return path
+
+    @classmethod
+    def VALIDATE_INPUTS(cls, video_path):
+        try:
+            cls._resolve(video_path)
+        except (OSError, ValueError) as error:
+            return str(error)
+        return True
+
+    @classmethod
+    def IS_CHANGED(cls, video_path):
+        try:
+            path = cls._resolve(video_path)
+            stat = path.stat()
+            return (str(path), stat.st_size, stat.st_mtime_ns)
+        except (OSError, ValueError):
+            return float("nan")
+
+    def load(self, video_path):
+        path = self._resolve(video_path)
+        return (InputImpl.VideoFromFile(str(path)),)
+
+
 class NVFlowRIFELoader:
     @classmethod
     def INPUT_TYPES(cls):
@@ -198,6 +248,7 @@ class NVFlowLongVideoProcess:
 
 
 NODE_CLASS_MAPPINGS = {
+    "NVFlowLoadVideoPath": NVFlowLoadVideoPath,
     "NVFlowRIFELoader": NVFlowRIFELoader,
     "NVFlowRIFEInterpolate": NVFlowRIFEInterpolate,
     "NVFlowRIFEVideo": NVFlowRIFEVideo,
@@ -206,6 +257,7 @@ NODE_CLASS_MAPPINGS = {
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
+    "NVFlowLoadVideoPath": "Load Video From Path (NV Flow)",
     "NVFlowRIFELoader": "Load RIFE (NV Flow)",
     "NVFlowRIFEInterpolate": "RIFE Interpolate (NV Flow)",
     "NVFlowRIFEVideo": "RIFE Video FPS (NV Flow)",
