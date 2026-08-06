@@ -41,6 +41,8 @@ Interpolates an IMAGE sequence in GPU batches.
 - Motion scaling adjusts the interpolation timing curve.
 - Scene-cut protection avoids inventing transition frames across detected cuts.
 - Batch size is reduced automatically after a CUDA out-of-memory error.
+- Additional image channels such as alpha follow the same output timeline with
+  linear temporal interpolation.
 
 For `N` input frames and multiplier `M`, output contains
 `(N - 1) * M + 1` frames. Both endpoints are retained without duplicating the
@@ -48,8 +50,8 @@ last frame.
 
 ## RIFE Video FPS (NV Flow)
 
-Accepts a `VIDEO`, detects its frame rate in the backend, and preserves its audio
-and metadata. Choose either:
+Accepts a `VIDEO`, detects its frame rate in the backend, and preserves its audio,
+metadata, and alpha components. Choose either:
 
 - `multiplier` to multiply the detected input rate by 1x-16x; or
 - `target_fps` to request a custom output rate.

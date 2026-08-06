@@ -114,6 +114,7 @@ def cuda_upscale(images, width, height, detail, batch_size, upscale_quality="aut
     while start < images.shape[0]:
         stop = min(start + chunk, images.shape[0])
         source = images[start:stop]
+        base = None
         try:
             base = source.movedim(-1, 1).to(device=device, dtype=torch.float32)
             base = F.interpolate(base, size=(height, width), mode="bicubic", align_corners=False, antialias=True)

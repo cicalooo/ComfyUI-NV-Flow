@@ -7,11 +7,12 @@ long-video processing.
 ## Highlights
 
 - Bundled RIFE 4.9 weights with 2x-16x interpolation or a custom target FPS.
+- Alpha preservation for composable IMAGE and short-video RIFE workflows.
 - Automatic input-FPS detection and timestamp-aware frame scheduling.
 - Quality-aware upscaling with `auto`, `faithful`, `restore`, and `enhance` modes.
 - Optional use of any ComfyUI-supported `UPSCALE_MODEL`.
 - Streaming processing for videos measured in minutes, with audio preservation,
-  resumable chunks, NVENC output, and verbose time-remaining estimates.
+  resumable chunks across model reloads, NVENC output, and verbose time-remaining estimates.
 - Direct loading from an absolute local path for large videos that should not be
   uploaded or copied into ComfyUI's input directory.
 - No install scripts, model downloads, TensorRT builds, or extra Python packages.

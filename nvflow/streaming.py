@@ -68,6 +68,23 @@ def _source_key(video, source):
     return ["buffer", digest]
 
 
+def _upscale_model_key(upscale_model):
+    digest = hashlib.sha256()
+    digest.update(upscale_model.__class__.__module__.encode())
+    digest.update(upscale_model.__class__.__name__.encode())
+    digest.update(str(upscale_model.scale).encode())
+    for name, value in sorted(upscale_model.model.state_dict().items()):
+        digest.update(name.encode())
+        if not isinstance(value, torch.Tensor):
+            digest.update(repr(value).encode())
+            continue
+        digest.update(str(value.dtype).encode())
+        digest.update(json.dumps(list(value.shape)).encode())
+        data = value.detach().to(device="cpu").contiguous().view(torch.uint8).numpy()
+        digest.update(data)
+    return digest.hexdigest()
+
+
 def _job_key(video, source, settings, rife, upscale_model):
     model_key = None
     if rife is not None:
@@ -75,7 +92,7 @@ def _job_key(video, source, settings, rife, upscale_model):
         model_key = [str(rife.weights.resolve()), stat.st_size, stat.st_mtime_ns, str(rife.dtype)]
     upscale_key = None
     if upscale_model is not None:
-        upscale_key = [upscale_model.__class__.__module__, upscale_model.__class__.__name__, upscale_model.scale, id(upscale_model)]
+        upscale_key = _upscale_model_key(upscale_model)
     payload = {
         "version": PIPELINE_VERSION,
         "source": _source_key(video, source),

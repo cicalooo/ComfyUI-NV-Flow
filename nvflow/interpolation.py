@@ -33,6 +33,21 @@ def _output_plan(frame_count, rate):
     return output_count, source, plan
 
 
+def interpolate_timeline(values, rate):
+    if values.shape[0] < 2 or rate <= 1.0:
+        return values
+
+    output_count, source, plan = _output_plan(values.shape[0], rate)
+    values = values.cpu()
+    output = torch.empty((output_count, *values.shape[1:]), dtype=values.dtype, device="cpu")
+    output[[item[0] for item in source]] = values[[item[1] for item in source]]
+    if plan:
+        first_indices = [item[1] for item in plan]
+        timesteps = torch.tensor([item[2] for item in plan], dtype=values.dtype).reshape(-1, *([1] * (values.ndim - 1)))
+        output[[item[0] for item in plan]] = torch.lerp(values[first_indices], values[[index + 1 for index in first_indices]], timesteps)
+    return output
+
+
 def interpolate_frames(frames, rife, multiplier, ensemble, scale, batch_size, scene_cut, target_fps=None, source_fps=None):
     if frames.shape[0] < 2:
         return frames
@@ -90,4 +105,6 @@ def interpolate_frames(frames, rife, multiplier, ensemble, scale, batch_size, sc
         rife.offload()
         mm.soft_empty_cache()
 
+    if frames.shape[-1] > 3:
+        output = torch.cat((output, interpolate_timeline(frames[..., 3:], rate)), dim=-1)
     return output

@@ -6,6 +6,8 @@ Use the IMAGE-based RIFE and upscale nodes for images and short clips. Their
 outputs can pass through normal ComfyUI IMAGE nodes, which makes this path the
 most composable. The tradeoff is that the complete input and output tensors must
 fit in system RAM, while active batches and models must fit in VRAM.
+RIFE preserves alpha with linear temporal interpolation on the same output
+timeline used for the RGB frames.
 
 ## Long-video path
 
@@ -44,8 +46,8 @@ Save Video node to choose a permanent filename.
 
 Long jobs write temporary encoded chunks. If a run is cancelled or fails,
 completed chunks are reused when the identical job is queued again in the same
-ComfyUI session. Resume data does not survive a ComfyUI restart because ComfyUI
-clears its temporary directory.
+ComfyUI session, including after an upscale model is reloaded. Resume data does
+not survive a ComfyUI restart because ComfyUI clears its temporary directory.
 
 Keep at least 2 GiB free on the ComfyUI temporary drive in addition to the space
 needed for the encoded result.
